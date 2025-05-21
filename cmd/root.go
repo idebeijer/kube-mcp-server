@@ -4,16 +4,39 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/idebeijer/kube-mcp-server/internal/config"
+	"github.com/idebeijer/kube-mcp-server/internal/mcpserver"
+	"github.com/idebeijer/kube-mcp-server/pkg/logger"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+	cfg     *config.Config
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "kube-mcp-server",
 	Short: "A Kubernetes MCP server",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		log.Info().Msg("Starting kube-mcp-server")
+		log.Debug().Msgf("Config: %+v", cfg)
+		server, err := mcpserver.New(cfg)
+		if err != nil {
+			return err
+		}
+		//if err := server.Start(":8088"); err != nil {
+		//	return fmt.Errorf("failed to start server: %w", err)
+		//}
+		if err := server.StartStdio(); err != nil {
+			return fmt.Errorf("failed to start server: %w", err)
+		}
+
+		return nil
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -27,30 +50,27 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(initLogging)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.kube-mcp-server.yaml)")
+
+	rootCmd.PersistentFlags().String("log-level", "info", "log level")
+	_ = viper.BindPFlag("logLevel", rootCmd.PersistentFlags().Lookup("log-level"))
+
+	rootCmd.PersistentFlags().String("kubeconfig-path", "", "path to kubeconfig file")
+	_ = viper.BindPFlag("kubeconfigPath", rootCmd.PersistentFlags().Lookup("kubeconfig-path"))
 }
 
-// initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
-		// Search config in home directory with name ".kube-mcp-server" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".kube-mcp-server")
+	var err error
+	cfg, err = config.Load(cfgFile)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to load config")
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	cfg.LogLevel = viper.GetString("logLevel")
+}
 
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	}
+func initLogging() {
+	logger.Init(os.Stdout, cfg.LogLevel, false)
 }
