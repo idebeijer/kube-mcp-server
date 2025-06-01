@@ -29,12 +29,10 @@ var rootCmd = &cobra.Command{
 
 		switch config.Mode(cfg.Mode) {
 		case config.ModeStdio:
-			log.Info().Msg("Running in stdio mode. Press Ctrl+C to exit.")
 			if err := server.StartStdio(); err != nil {
 				return fmt.Errorf("failed to start MCP server: %w", err)
 			}
 		case config.ModeSSE:
-			log.Info().Msgf("Running in SSE mode. Listening on %s", ":3001")
 			if err := server.StartSSE(fmt.Sprintf(":%s", cfg.SSEPort)); err != nil {
 				return fmt.Errorf("failed to start MCP server: %w", err)
 			}

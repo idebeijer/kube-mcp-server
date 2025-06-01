@@ -35,10 +35,17 @@ func WithResources() Option {
 
 func New(cfg *config.Config, opts ...Option) (*Server, error) {
 	var restCfg *rest.Config
+	var err error
 	if cfg.Kubeconfig != "" {
-		restCfg, _ = clientcmd.BuildConfigFromFlags("", cfg.Kubeconfig)
+		restCfg, err = clientcmd.BuildConfigFromFlags("", cfg.Kubeconfig)
+		if err != nil {
+			return nil, err
+		}
 	} else {
-		restCfg, _ = rest.InClusterConfig()
+		restCfg, err = rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
 	}
 	client, err := kubernetes.NewForConfig(restCfg)
 	if err != nil {
@@ -57,11 +64,11 @@ func New(cfg *config.Config, opts ...Option) (*Server, error) {
 		server.WithLogging(),
 	}
 	if s.enableTools {
-		log.Info().Msg("enabling tools")
+		log.Info().Msg("Enabling tools")
 		mcpServerOpts = append(mcpServerOpts, server.WithToolCapabilities(true))
 	}
 	if s.enableResources {
-		log.Info().Msg("enabling resources")
+		log.Info().Msg("Enabling resources")
 		mcpServerOpts = append(mcpServerOpts, server.WithResourceCapabilities(false, true))
 	}
 
@@ -85,10 +92,11 @@ func New(cfg *config.Config, opts ...Option) (*Server, error) {
 
 func (s *Server) StartSSE(addr string) error {
 	sse := server.NewSSEServer(s.mcp)
-	log.Info().Msgf("starting MCP server on %s", addr)
+	log.Info().Msgf("Starting MCP server on %s", addr)
 	return sse.Start(addr)
 }
 
 func (s *Server) StartStdio() error {
+	log.Info().Msg("Running in stdio mode. Press Ctrl+C to exit.")
 	return server.ServeStdio(s.mcp)
 }
