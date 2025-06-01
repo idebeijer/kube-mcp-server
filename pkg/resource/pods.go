@@ -34,8 +34,7 @@ func (h *Handler) getPodsInNamespace(ctx context.Context, request mcp.ReadResour
 		return nil, fmt.Errorf("failed to list pods in namespace '%s': %w", targetNamespace, err)
 	}
 
-	var podSummaries []map[string]interface {
-	}
+	var podSummaries []map[string]interface{}
 	for _, pod := range pods.Items {
 		ready, total := kube.GetPodReadyContainers(pod.Status.ContainerStatuses)
 		podSummaries = append(podSummaries, map[string]interface{}{
@@ -87,8 +86,7 @@ func (h *Handler) getPods(ctx context.Context, request mcp.ReadResourceRequest) 
 		return nil, fmt.Errorf("failed to list pods in all namespace: %w", err)
 	}
 
-	var podSummaries []map[string]interface {
-	}
+	var podSummaries []map[string]interface{}
 	for _, pod := range pods.Items {
 		ready, total := kube.GetPodReadyContainers(pod.Status.ContainerStatuses)
 		podSummaries = append(podSummaries, map[string]interface{}{

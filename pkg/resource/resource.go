@@ -17,4 +17,7 @@ func NewHandler(client *kubernetes.Clientset) *Handler {
 
 func (h *Handler) Register(m *server.MCPServer) {
 	h.registerPods(m)
+	h.registerDeployments(m)
+	h.registerServices(m)
+	h.registerStatefulSets(m)
 }
