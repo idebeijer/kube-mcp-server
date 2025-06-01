@@ -93,7 +93,7 @@ func (h *Handler) getDeploymentsInNamespace(ctx context.Context, request mcp.Rea
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal deployment summaries: %w", err)
 	}
-	
+
 	return []mcp.ResourceContents{
 		mcp.TextResourceContents{
 			URI:      uri,

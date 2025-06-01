@@ -79,7 +79,11 @@ func New(cfg *config.Config, opts ...Option) (*Server, error) {
 	s.mcp = mcpServer
 
 	if s.enableTools {
-		tools := tool.NewHandler(s.client)
+		var toolOpts []tool.Option
+		if !cfg.DisableKubectl {
+			toolOpts = append(toolOpts, tool.WithKubectlTools())
+		}
+		tools, _ := tool.NewHandler(s.client, cfg.Kubeconfig, toolOpts...)
 		tools.Register(s.mcp)
 	}
 	if s.enableResources {

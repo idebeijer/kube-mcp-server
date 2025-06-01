@@ -104,7 +104,7 @@ func (h *Handler) getServicesInNamespace(ctx context.Context, request mcp.ReadRe
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal service summaries: %w", err)
 	}
-	
+
 	return []mcp.ResourceContents{
 		mcp.TextResourceContents{
 			URI:      uri,

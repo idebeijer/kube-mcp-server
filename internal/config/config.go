@@ -14,6 +14,7 @@ type Config struct {
 	Kubeconfig        string `mapstructure:"kubeconfig"`
 	Mode              string `mapstructure:"mode"`
 	SSEPort           string `mapstructure:"ssePort"`
+	DisableKubectl    bool   `mapstructure:"disableKubectl"`
 }
 
 type Mode string

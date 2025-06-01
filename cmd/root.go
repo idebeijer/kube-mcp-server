@@ -70,6 +70,9 @@ func init() {
 
 	rootCmd.PersistentFlags().String("sse-port", "8080", "port for SSE mode")
 	_ = viper.BindPFlag("ssePort", rootCmd.PersistentFlags().Lookup("sse-port"))
+
+	rootCmd.PersistentFlags().Bool("disable-kubectl", false, "disable kubectl tools")
+	_ = viper.BindPFlag("disableKubectl", rootCmd.PersistentFlags().Lookup("disable-kubectl"))
 }
 
 func initConfig() {
