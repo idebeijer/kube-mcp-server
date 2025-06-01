@@ -1,0 +1,120 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - ./scripts/completions.sh
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - "-s -w"
+
+dockers:
+  - id: docker_amd64
+    goos: linux
+    goarch: amd64
+    dockerfile: Dockerfile.goreleaser
+    image_templates:
+      - "idebeijer/{{ .ProjectName }}:{{ .Tag }}-amd64"
+    skip_push: true
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--pull"
+      - "--label=io.artifacthub.package.readme-url=https://raw.githubusercontent.com/idebeijer/kube-mcp-server/main/README.md"
+      - "--label=io.artifacthub.package.license=MIT"
+      - "--label=org.opencontainers.image.description=An MCP server for Kubernetes"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+
+  - id: docker_arm64
+    goos: linux
+    goarch: arm64
+    dockerfile: Dockerfile.goreleaser
+    image_templates:
+      - "idebeijer/{{ .ProjectName }}:{{ .Tag }}-arm64"
+    skip_push: true
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--pull"
+      - "--label=io.artifacthub.package.readme-url=https://raw.githubusercontent.com/idebeijer/kube-mcp-server/main/README.md"
+      - "--label=io.artifacthub.package.license=MIT"
+      - "--label=org.opencontainers.image.description=An MCP server for Kubernetes"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+
+docker_manifests:
+  - name_template: "idebeijer/{{ .ProjectName }}:{{ .Tag }}"
+    image_templates:
+      - "idebeijer/{{ .ProjectName }}:{{ .Tag }}-amd64"
+      - "idebeijer/{{ .ProjectName }}:{{ .Tag }}-arm64"
+  - name_template: "idebeijer/{{ .ProjectName }}:latest"
+    image_templates:
+      - "idebeijer/{{ .ProjectName }}:{{ .Tag }}-amd64"
+      - "idebeijer/{{ .ProjectName }}:{{ .Tag }}-arm64"
+
+archives:
+  - id: completions
+    files:
+      - completions/*
+
+brews:
+  - repository:
+      owner: idebeijer
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/idebeijer/kube-mcp-server"
+    dependencies:
+      - name: kubectl
+        type: optional
+    install: |
+      bin.install "kube-mcp-server"
+      zsh_completion.install "completions/kube-mcp-server.zsh" => "_kube-mcp-server"
+      bash_completion.install "completions/kube-mcp-server.bash" => "kube-mcp-server"
+      fish_completion.install "completions/kube-mcp-server.fish"
+
+release:
+  footer: |
+    **Full Changelog**: https://github.com/idebeijer/kube-mcp-server/compare/{{ .PrevTag }}...{{ .Tag }}
+
+changelog:
+  use: github
+  groups:
+    - title: "Breaking changes"
+      regexp: '^.*?\w+(\(.+\))?!:\s?.+$'
+      order: 0
+    - title: "Features"
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 1
+    - title: "Bug fixes"
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 2
+    - title: "Documentation"
+      regexp: '^.*?docs(\(.+\))??!?:.+$'
+      order: 3
+    - title: "Others"
+      order: 999
+  filters:
+    exclude:
+      - '^.*?(test|style)(\(.+\))??!?:.+$'
+      - 'initial commit'

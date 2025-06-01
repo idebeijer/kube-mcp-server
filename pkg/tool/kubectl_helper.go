@@ -2,7 +2,6 @@ package tool
 
 import (
 	"context"
-	"fmt"
 	"os/exec"
 )
 
