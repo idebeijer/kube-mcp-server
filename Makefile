@@ -17,3 +17,7 @@ build: fmt vet
 .PHONY: run
 run: fmt vet
 	go run ./main.go
+
+.PHONY: mcp
+mcp: build
+	npx @modelcontextprotocol/inspector@latest bin/kube-mcp-server

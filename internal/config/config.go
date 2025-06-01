@@ -11,8 +11,16 @@ import (
 type Config struct {
 	LogLevel          string `mapstructure:"logLevel"`
 	StructuredLogging bool   `mapstructure:"structuredLogging"`
-	KubeConfigPath    string `mapstructure:"kubeconfigPath"`
+	Kubeconfig        string `mapstructure:"kubeconfig"`
+	Mode              string `mapstructure:"mode"`
 }
+
+type Mode string
+
+const (
+	ModeStdio Mode = "stdio"
+	ModeSSE   Mode = "sse"
+)
 
 func Load(cfgFile string) (*Config, error) {
 	v := viper.GetViper()

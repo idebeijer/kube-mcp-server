@@ -2,6 +2,8 @@ package mcpserver
 
 import (
 	"github.com/idebeijer/kube-mcp-server/internal/config"
+	"github.com/idebeijer/kube-mcp-server/pkg/resource"
+	"github.com/idebeijer/kube-mcp-server/pkg/tool"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/rs/zerolog/log"
 	"k8s.io/client-go/kubernetes"
@@ -10,42 +12,62 @@ import (
 )
 
 type Server struct {
-	MCP *server.MCPServer
-	K8s *kubernetes.Clientset
+	mcp    *server.MCPServer
+	client *kubernetes.Clientset
 }
 
-func New(cfg *config.Config) (*Server, error) {
+type Option func(*Server)
+
+func WithTools() Option {
+	return func(k *Server) {
+		tools := tool.NewHandler(k.client)
+		tools.Register(k.mcp)
+	}
+}
+
+func WithResources() Option {
+	return func(s *Server) {
+		resources := resource.NewHandler(s.client)
+		resources.Register(s.mcp)
+	}
+}
+
+func New(cfg *config.Config, opts ...Option) (*Server, error) {
 	var restCfg *rest.Config
-	if cfg.KubeConfigPath != "" {
-		restCfg, _ = clientcmd.BuildConfigFromFlags("", cfg.KubeConfigPath)
+	if cfg.Kubeconfig != "" {
+		restCfg, _ = clientcmd.BuildConfigFromFlags("", cfg.Kubeconfig)
 	} else {
 		restCfg, _ = rest.InClusterConfig()
 	}
-	clientset, err := kubernetes.NewForConfig(restCfg)
+	client, err := kubernetes.NewForConfig(restCfg)
 	if err != nil {
 		return nil, err
 	}
 
-	m := server.NewMCPServer(
+	mcpServer := server.NewMCPServer(
 		"kube-mcp-server", "0.1.0",
 		server.WithToolCapabilities(true),
+		server.WithResourceCapabilities(true, true),
 		server.WithLogging(),
 	)
 
-	RegisterTools(m, clientset)
+	s := &Server{
+		mcp:    mcpServer,
+		client: client,
+	}
+	for _, opt := range opts {
+		opt(s)
+	}
 
-	return &Server{
-		MCP: m,
-		K8s: clientset,
-	}, nil
+	return s, nil
 }
 
-func (s *Server) Start(addr string) error {
-	sse := server.NewSSEServer(s.MCP)
+func (s *Server) StartSSE(addr string) error {
+	sse := server.NewSSEServer(s.mcp)
 	log.Info().Msgf("starting MCP server on %s", addr)
 	return sse.Start(addr)
 }
 
 func (s *Server) StartStdio() error {
-	return server.ServeStdio(s.MCP)
+	return server.ServeStdio(s.mcp)
 }

@@ -22,17 +22,24 @@ var rootCmd = &cobra.Command{
 	Use:   "kube-mcp-server",
 	Short: "A Kubernetes MCP server",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		log.Info().Msg("Starting kube-mcp-server")
-		log.Debug().Msgf("Config: %+v", cfg)
-		server, err := mcpserver.New(cfg)
+		server, err := mcpserver.New(cfg, mcpserver.WithResources(), mcpserver.WithTools())
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create MCP server: %w", err)
 		}
-		//if err := server.Start(":8088"); err != nil {
-		//	return fmt.Errorf("failed to start server: %w", err)
-		//}
-		if err := server.StartStdio(); err != nil {
-			return fmt.Errorf("failed to start server: %w", err)
+
+		switch config.Mode(cfg.Mode) {
+		case config.ModeStdio:
+			log.Info().Msg("Running in stdio mode. Press Ctrl+C to exit.")
+			if err := server.StartStdio(); err != nil {
+				return fmt.Errorf("failed to start MCP server: %w", err)
+			}
+		case config.ModeSSE:
+			log.Info().Msgf("Running in SSE mode. Listening on %s", ":3001")
+			if err := server.StartSSE(":3001"); err != nil {
+				return fmt.Errorf("failed to start MCP server: %w", err)
+			}
+		default:
+			return fmt.Errorf("unknown mode: %s", cfg.Mode)
 		}
 
 		return nil
@@ -57,8 +64,11 @@ func init() {
 	rootCmd.PersistentFlags().String("log-level", "info", "log level")
 	_ = viper.BindPFlag("logLevel", rootCmd.PersistentFlags().Lookup("log-level"))
 
-	rootCmd.PersistentFlags().String("kubeconfig-path", "", "path to kubeconfig file")
-	_ = viper.BindPFlag("kubeconfigPath", rootCmd.PersistentFlags().Lookup("kubeconfig-path"))
+	rootCmd.PersistentFlags().String("kubeconfig", "", "path to kubeconfig file")
+	_ = viper.BindPFlag("kubeconfig", rootCmd.PersistentFlags().Lookup("kubeconfig"))
+
+	rootCmd.PersistentFlags().String("mode", "stdio", "mode of operation (stdio or sse)")
+	_ = viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode"))
 }
 
 func initConfig() {
