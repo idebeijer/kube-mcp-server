@@ -35,7 +35,7 @@ var rootCmd = &cobra.Command{
 			}
 		case config.ModeSSE:
 			log.Info().Msgf("Running in SSE mode. Listening on %s", ":3001")
-			if err := server.StartSSE(":3001"); err != nil {
+			if err := server.StartSSE(fmt.Sprintf(":%s", cfg.SSEPort)); err != nil {
 				return fmt.Errorf("failed to start MCP server: %w", err)
 			}
 		default:
@@ -69,6 +69,9 @@ func init() {
 
 	rootCmd.PersistentFlags().String("mode", "stdio", "mode of operation (stdio or sse)")
 	_ = viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode"))
+
+	rootCmd.PersistentFlags().String("sse-port", "8080", "port for SSE mode")
+	_ = viper.BindPFlag("ssePort", rootCmd.PersistentFlags().Lookup("sse-port"))
 }
 
 func initConfig() {

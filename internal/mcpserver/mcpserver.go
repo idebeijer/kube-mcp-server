@@ -14,21 +14,22 @@ import (
 type Server struct {
 	mcp    *server.MCPServer
 	client *kubernetes.Clientset
+
+	enableTools     bool
+	enableResources bool
 }
 
 type Option func(*Server)
 
 func WithTools() Option {
-	return func(k *Server) {
-		tools := tool.NewHandler(k.client)
-		tools.Register(k.mcp)
+	return func(s *Server) {
+		s.enableTools = true
 	}
 }
 
 func WithResources() Option {
 	return func(s *Server) {
-		resources := resource.NewHandler(s.client)
-		resources.Register(s.mcp)
+		s.enableResources = true
 	}
 }
 
@@ -44,19 +45,39 @@ func New(cfg *config.Config, opts ...Option) (*Server, error) {
 		return nil, err
 	}
 
-	mcpServer := server.NewMCPServer(
-		"kube-mcp-server", "0.1.0",
-		server.WithToolCapabilities(true),
-		server.WithResourceCapabilities(true, true),
-		server.WithLogging(),
-	)
-
 	s := &Server{
-		mcp:    mcpServer,
 		client: client,
 	}
+
 	for _, opt := range opts {
 		opt(s)
+	}
+
+	mcpServerOpts := []server.ServerOption{
+		server.WithLogging(),
+	}
+	if s.enableTools {
+		log.Info().Msg("enabling tools")
+		mcpServerOpts = append(mcpServerOpts, server.WithToolCapabilities(true))
+	}
+	if s.enableResources {
+		log.Info().Msg("enabling resources")
+		mcpServerOpts = append(mcpServerOpts, server.WithResourceCapabilities(false, true))
+	}
+
+	mcpServer := server.NewMCPServer(
+		"kube-mcp-server", "0.1.0",
+		mcpServerOpts...,
+	)
+	s.mcp = mcpServer
+
+	if s.enableTools {
+		tools := tool.NewHandler(s.client)
+		tools.Register(s.mcp)
+	}
+	if s.enableResources {
+		resources := resource.NewHandler(s.client)
+		resources.Register(s.mcp)
 	}
 
 	return s, nil

@@ -13,6 +13,7 @@ type Config struct {
 	StructuredLogging bool   `mapstructure:"structuredLogging"`
 	Kubeconfig        string `mapstructure:"kubeconfig"`
 	Mode              string `mapstructure:"mode"`
+	SSEPort           string `mapstructure:"ssePort"`
 }
 
 type Mode string
