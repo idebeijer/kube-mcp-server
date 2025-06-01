@@ -13,13 +13,16 @@ import (
 )
 
 func (h *Handler) registerPods(m *server.MCPServer) {
-	m.AddResource(mcp.Resource{
-		URI:         "k8s://pods",
-		Name:        "Pods",
-		Description: "List and view pods across all namespaces",
-		MIMEType:    "application/json",
-	}, h.getPods)
-	m.AddResourceTemplate(mcp.NewResourceTemplate("k8s://{namespace}/pods", "Pods in namespace"), h.getPodsInNamespace)
+	m.AddResource(mcp.NewResource("k8s://pods", "Pods",
+		mcp.WithResourceDescription("List and view pods across all namespaces"),
+		mcp.WithMIMEType("application/json"),
+	), h.getPods)
+	m.AddResourceTemplate(mcp.NewResourceTemplate(
+		"k8s://{namespace}/pods",
+		"Pods in namespace",
+		mcp.WithTemplateDescription("List and view pods in a specific namespace"),
+		mcp.WithTemplateMIMEType("application/json"),
+	), h.getPodsInNamespace)
 }
 
 func (h *Handler) getPodsInNamespace(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
