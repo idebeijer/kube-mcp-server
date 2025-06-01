@@ -3,7 +3,7 @@ module github.com/idebeijer/kube-mcp-server
 go 1.24.3
 
 require (
-	github.com/mark3labs/mcp-go v0.30.1
+	github.com/mark3labs/mcp-go v0.31.0
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
