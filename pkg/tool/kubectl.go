@@ -251,6 +251,18 @@ func (h *Handler) registerKubectl(m *server.MCPServer) {
 			mcp.DefaultBool(false),
 		),
 	), mcp.NewTypedToolHandler[KubectlAnnotateArgs](h.kubectlAnnotateHandler()))
+
+	m.AddTool(mcp.NewTool("kubectl_generic",
+		mcp.WithDescription("Execute any kubectl command with custom arguments - use this for kubectl functionality not covered by other specific tools"),
+		mcp.WithString("args",
+			mcp.Description("Complete kubectl command arguments as a space-separated string (e.g., 'get pods --all-namespaces', 'scale deployment nginx --replicas=3', 'port-forward pod/nginx 8080:80', 'exec pod-name -- ls /app')"),
+			mcp.Required(),
+		),
+		mcp.WithBoolean("parse_json",
+			mcp.Description("Attempt to parse and format JSON output for better readability"),
+			mcp.DefaultBool(true),
+		),
+	), mcp.NewTypedToolHandler[KubectlGenericArgs](h.kubectlGenericHandler()))
 }
 
 type KubectlGetArgs struct {
@@ -692,6 +704,57 @@ func (h *Handler) kubectlAnnotateHandler() mcp.TypedToolHandlerFunc[KubectlAnnot
 		}
 
 		fullResponse := fmt.Sprintf("Command executed: kubectl %s\n\n%s", strings.Join(cmdArgs, " "), string(output))
+		return mcp.NewToolResultText(fullResponse), nil
+	}
+}
+
+type KubectlGenericArgs struct {
+	Args      string `json:"args"`
+	ParseJSON bool   `json:"parse_json"`
+}
+
+func (h *Handler) kubectlGenericHandler() mcp.TypedToolHandlerFunc[KubectlGenericArgs] {
+	return func(
+		ctx context.Context,
+		req mcp.CallToolRequest,
+		args KubectlGenericArgs,
+	) (*mcp.CallToolResult, error) {
+		if args.Args == "" {
+			return mcp.NewToolResultError("args parameter is required"), nil
+		}
+
+		// Split the args string into individual arguments
+		cmdArgs := strings.Fields(args.Args)
+
+		if len(cmdArgs) == 0 {
+			return mcp.NewToolResultError("at least one argument is required"), nil
+		}
+
+		output, err := h.runKubectl(ctx, cmdArgs...)
+		if err != nil {
+			errorMsg := fmt.Sprintf("kubectl command failed: %v\nCommand: kubectl %s\nOutput: %s",
+				err, strings.Join(cmdArgs, " "), string(output))
+			return mcp.NewToolResultError(errorMsg), nil
+		}
+
+		response := string(output)
+
+		// Attempt to format JSON output if requested and if the output appears to be JSON
+		if args.ParseJSON && len(output) > 0 {
+			// Check if output looks like JSON (starts with { or [)
+			trimmed := strings.TrimSpace(string(output))
+			if (strings.HasPrefix(trimmed, "{") && strings.HasSuffix(trimmed, "}")) ||
+				(strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]")) {
+				var jsonData interface{}
+				if err := json.Unmarshal(output, &jsonData); err == nil {
+					if formatted, err := json.MarshalIndent(jsonData, "", "  "); err == nil {
+						response = string(formatted)
+					}
+				}
+			}
+		}
+
+		fullResponse := fmt.Sprintf("Command executed: kubectl %s\n\n%s", strings.Join(cmdArgs, " "), response)
 		return mcp.NewToolResultText(fullResponse), nil
 	}
 }
