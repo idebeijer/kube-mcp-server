@@ -77,21 +77,19 @@ archives:
     files:
       - completions/*
 
-brews:
+homebrew_casks:
   - repository:
       owner: idebeijer
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
+    directory: Casks
     homepage: "https://github.com/idebeijer/kube-mcp-server"
     dependencies:
-      - name: kubectl
-        type: optional
-    install: |
-      bin.install "kube-mcp-server"
-      zsh_completion.install "completions/kube-mcp-server.zsh" => "_kube-mcp-server"
-      bash_completion.install "completions/kube-mcp-server.bash" => "kube-mcp-server"
-      fish_completion.install "completions/kube-mcp-server.fish"
+      - formula: kubernetes-cli
+    completions:
+      bash: completions/kube-mcp-server.bash
+      zsh: completions/kube-mcp-server.zsh
+      fish: completions/kube-mcp-server.fish
 
 release:
   footer: |
